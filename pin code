@@ -1,0 +1,152 @@
+packages- pin_code_fields
+
+///code-
+import 'package:flutter/material.dart';
+import 'package:pin_code_fields/pin_code_fields.dart';
+import 'dart:async';
+
+class PinVerificationScreen extends StatefulWidget {
+  const PinVerificationScreen({super.key});
+
+  @override
+  _PinVerificationScreenState createState() => _PinVerificationScreenState();
+}
+
+class _PinVerificationScreenState extends State<PinVerificationScreen> {
+  final TextEditingController _pinController = TextEditingController();
+  String enteredPin = "";
+  String correctPin = "1316";
+  bool hasError = false;
+  bool isResendEnabled = false;
+  int currentTime = 20;
+  Timer? countdownTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    startResendTimer();
+  }
+
+  void startResendTimer() {
+    setState(() {
+      currentTime = 20;
+      isResendEnabled = false;
+    });
+
+    countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        if (currentTime > 0) {
+          currentTime--;
+        } else {
+          timer.cancel();
+          isResendEnabled = true;
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  void verifyPin() {
+    if (enteredPin == correctPin) {
+      setState(() {
+        hasError = false;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Code Verified!')),
+        );
+      });
+    } else {
+      setState(() {
+        hasError = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Enter code'),
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'We\'ve sent an SMS with an activation code to your phone +351 2 94 27 84 11',
+              style: TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            PinCodeTextField(
+              appContext: context,
+              length: 4,
+              keyboardType: TextInputType.number,
+              animationType: AnimationType.fade,
+              pinTheme: PinTheme(
+                shape: PinCodeFieldShape.box,
+                borderRadius: BorderRadius.circular(8),
+                fieldHeight: 60,
+                fieldWidth: 60,
+                activeColor: hasError ? Colors.red : Colors.black,
+                selectedColor: Colors.black,
+                inactiveColor: Colors.grey,
+                activeFillColor: hasError ? Colors.red.shade50 : Colors.white,
+                selectedFillColor: Colors.white,
+                inactiveFillColor: Colors.white,
+              ),
+              enableActiveFill: true,
+              controller: _pinController,
+              onCompleted: (pin) {},
+              onChanged: (value) {
+                setState(() {
+                  enteredPin = value;
+                });
+              },
+            ),
+            const SizedBox(height: 10),
+            if (hasError)
+              const Text(
+                'Wrong code, please try again',
+                style: TextStyle(color: Colors.red, fontSize: 14),
+              ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amberAccent,
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              onPressed: verifyPin,
+              child: const Text(
+                'Verify',
+                style: TextStyle(color: Colors.black),
+              ),
+            ),
+            const Spacer(),
+            isResendEnabled
+                ? GestureDetector(
+                    onTap: startResendTimer,
+                    child: const Text(
+                      "I didn't receive a code. Resend?",
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  )
+                : Text(
+                    'Send code again in 00:${currentTime.toString().padLeft(2, '0')}',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+          ],
+        ),
+      ),
+    );
+  }
+}
